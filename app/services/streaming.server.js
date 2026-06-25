@@ -55,8 +55,8 @@ export function createStreamManager(encoder, controller) {
     if (error.status === 401 || error.message.includes('auth') || error.message.includes('key')) {
       sendError({
         type: 'error',
-        error: 'Authentication failed with Claude API',
-        details: 'Please check your API key in environment variables'
+        error: 'Authentication failed with AI service',
+        details: 'Please check your AINATIVE_API_KEY or CLAUDE_API_KEY in environment variables'
       });
     } else if (error.status === 429 || error.status === 529 || error.message.includes('Overloaded')) {
       sendError({
@@ -67,7 +67,7 @@ export function createStreamManager(encoder, controller) {
     } else {
       sendError({
         type: 'error',
-        error: 'Failed to get response from Claude',
+        error: 'Failed to get response from AI service',
         details: error.message
       });
     }

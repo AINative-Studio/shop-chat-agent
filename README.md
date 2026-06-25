@@ -1,67 +1,121 @@
-# Build an AI Agent for Your Storefront
+# Shopify AI Shopping Agent — Powered by AINative
 
-A Shopify template app that lets you embed an AI-powered chat widget on your storefront. Shoppers can search for products, ask about policies or shipping, and complete purchases - all without leaving the conversation. Under the hood it speaks the [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) to tap into Shopify’s APIs.
+A Shopify app that embeds an AI-powered chat widget on your storefront. Shoppers can search for products, ask about policies, build carts, and checkout — all through conversation. Built on Shopify's [Model Context Protocol](https://modelcontextprotocol.io/) (MCP).
 
-## Overview
+**Forked from [Shopify/shop-chat-agent](https://github.com/Shopify/shop-chat-agent) and enhanced with AINative infrastructure.**
 
-- **What it is**: A chat widget + backend that turns any storefront into an AI shopping assistant.
-- **Key features**:
-  - Natural-language product discovery
-  - Store policy & FAQ lookup
-  - Create carts, add or remove items, and initiate checkout
-  - Track orders and initiate returns
+## What's Different from Shopify's Version
 
-## Developer Docs
-- Everything from installation to deep dives lives on https://shopify.dev/docs/apps/build/storefront-mcp.
-- Clone this repo and follow the instructions on the dev docs.
+| Feature | Shopify Original | AINative Version |
+|---------|-----------------|------------------|
+| **LLM Provider** | Claude only (direct API) | AINative Gateway — multi-provider failover (Claude, GPT, Meta, Cerebras) |
+| **Shopper Memory** | None (stateless) | ZeroMemory — remembers preferences, sizes, past orders across sessions |
+| **Cost Tracking** | None | Per-store token metering and usage analytics |
+| **Rate Limiting** | None | Per-tenant rate limiting via gateway |
+| **Failover** | Single provider | Automatic failover across 4+ providers |
 
-## Examples
-- `hi` > will return a LLM based response. Note that you can customize the LLM call with your own prompt.
-- `can you search for snowboards` > will use the `search_shop_catalog` MCP tool.
-- `add The Videographer Snowboard to my cart` > will use the `update_cart` MCP tool and offer a checkout URL.
-- `update my cart to make that 2 items please` > will use the `update_cart` MCP tool.
-- `can you tell me what is in my cart` > will use the `get_cart` MCP tool.
-- `what languages is your store available in?` > will use the `search_shop_policies_and_faqs` MCP tool.
-- `I'd like to checkout` > will call checkout from one of the above MCP cart tools.
-- `Show me my recent orders` > will use the `get_most_recent_order_status` MCP tool.
-- `Can you give me more details about order Id 1` > will use the `get_order_status` MCP tool.
+## Quick Start
+
+```bash
+# Clone
+git clone git@github.com:AINative-Studio/shop-chat-agent.git
+cd shop-chat-agent
+npm install
+
+# Configure (choose one)
+# Option A: AINative Gateway (recommended)
+echo "AINATIVE_API_KEY=your_ainative_key" >> .env
+
+# Option B: Direct Claude (fallback)
+echo "CLAUDE_API_KEY=your_claude_key" >> .env
+
+# Add Shopify credentials
+echo "SHOPIFY_API_KEY=your_app_client_id" >> .env
+
+# Run
+npm run dev
+```
+
+Get your AINative API key at [ainative.studio](https://ainative.studio) — provision in 60 seconds.
+
+## Features
+
+- **Natural-language product discovery** — "show me winter jackets under $200"
+- **Smart cart management** — add, remove, update quantities through conversation
+- **Store policy & FAQ lookup** — shipping, returns, languages
+- **Order tracking** — "where's my last order?"
+- **Persistent shopper memory** (AINative) — remembers preferences across visits
+- **Multi-provider AI** (AINative) — automatic failover, never goes down
 
 ## Architecture
 
+```
+Shopper → Chat Widget → React Router Backend → AINative Gateway → LLM
+                                    ↕                    ↕
+                              Shopify MCP          ZeroMemory
+                          (products, cart,     (shopper preferences,
+                           orders, policies)    past interactions)
+```
+
 ### Components
-This app consists of two main components:
 
-1. **Backend**: A React Router app server that handles communication with Claude, processes chat messages, and acts as an MCP Client.
-2. **Chat UI**: A Shopify theme extension that provides the customer-facing chat interface.
+1. **Backend**: React Router server handling chat, MCP client, AINative/Claude integration
+2. **Chat UI**: Shopify theme extension — the customer-facing chat bubble
+3. **AINative Service** (`app/services/ainative.server.js`): Gateway integration + ZeroMemory
 
-When you start the app, it will:
-- Start React Router in development mode.
-- Tunnel your local server so Shopify can reach it.
-- Provide a preview URL to install the app on your development store.
+### MCP Tools (from Shopify)
 
-For direct testing, point your test suite at the `/chat` endpoint (GET or POST for streaming).
-
-### MCP Tools Integration
-- The backend already initializes all Shopify MCP tools—see [`app/mcp-client.js`](./app/mcp-client.js).
-- These tools let your LLM invoke product search, cart actions, order lookups, etc.
-- More in our [dev docs](https://shopify.dev/docs/apps/build/storefront-mcp).
+| Tool | What it does |
+|------|-------------|
+| `search_catalog` | Natural language product search |
+| `update_cart` | Add/remove/update cart items |
+| `get_cart` | View current cart |
+| `search_shop_policies_and_faqs` | Store policies, shipping, returns |
+| `get_order_status` | Look up a specific order |
+| `get_most_recent_order_status` | Check latest order |
 
 ### Tech Stack
+
 - **Framework**: [React Router](https://reactrouter.com/)
-- **AI**: [Claude by Anthropic](https://www.anthropic.com/claude)
-- **Shopify Integration**: [@shopify/shopify-app-react-router](https://www.npmjs.com/package/@shopify/shopify-app-react-router)
+- **AI**: [AINative Gateway](https://ainative.studio) (Claude, GPT, Meta, Cerebras)
+- **Memory**: [ZeroMemory](https://docs.ainative.studio) — persistent cognitive memory
+- **Shopify**: [@shopify/shopify-app-react-router](https://www.npmjs.com/package/@shopify/shopify-app-react-router)
 - **Database**: SQLite (via Prisma) for session storage
 
-## Customizations
-This repo can be customized. You can:
-- Edit the prompt
-- Change the chat widget UI
-- Swap out the LLM
+## Environment Variables
 
-You can learn how from our [dev docs](https://shopify.dev/docs/apps/build/storefront-mcp).
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `AINATIVE_API_KEY` | Recommended | AINative Gateway key (multi-provider + memory) |
+| `CLAUDE_API_KEY` | Fallback | Direct Anthropic key (if no AINative key) |
+| `SHOPIFY_API_KEY` | Yes | Your Shopify app client ID |
+| `AINATIVE_MODEL` | No | Override default model (default: claude-sonnet-4) |
+| `REDIRECT_URL` | No | OAuth callback URL |
+
+## Customization
+
+- **Edit the prompt**: `app/prompts/prompts.json`
+- **Change the chat UI**: `extensions/` directory
+- **Switch models**: Set `AINATIVE_MODEL` env var
+- **Add memory tags**: Modify `app/services/ainative.server.js`
+
+## NPM Package
+
+Also available as an npm package:
+
+```bash
+npx ainative-shopify-mcp
+```
 
 ## Deployment
-Follow standard Shopify app deployment procedures as outlined in the [Shopify documentation](https://shopify.dev/docs/apps/deployment/web).
 
-## Contributing
-We appreciate your interest in contributing to this project. As this is an example repository intended for educational and reference purposes, we are not accepting contributions.
+Follow standard [Shopify app deployment](https://shopify.dev/docs/apps/deployment/web). Works on Railway, Vercel, or any Node.js host.
+
+## Links
+
+- [AINative Studio](https://ainative.studio) — Get your API key
+- [ZeroMemory Docs](https://docs.ainative.studio) — Persistent agent memory
+- [Shopify MCP Docs](https://shopify.dev/docs/apps/build/storefront-mcp) — Storefront MCP reference
+- [Original Shopify Repo](https://github.com/Shopify/shop-chat-agent)
+
+Built by AINative Dev Team

@@ -6,6 +6,7 @@ import MCPClient from "../mcp-client";
 import { saveMessage, getConversationHistory, storeCustomerAccountUrls, getCustomerAccountUrls as getCustomerAccountUrlsFromDb } from "../db.server";
 import AppConfig from "../services/config.server";
 import { createSseStream } from "../services/streaming.server";
+import { createAINativeService } from "../services/ainative.server";
 import { createClaudeService } from "../services/claude.server";
 import { createToolService } from "../services/tool.server";
 
@@ -119,8 +120,10 @@ async function handleChatSession({
   promptType,
   stream
 }) {
-  // Initialize services
-  const claudeService = createClaudeService();
+  // Initialize services — AINative gateway with Claude fallback
+  const claudeService = process.env.AINATIVE_API_KEY
+    ? createAINativeService()
+    : createClaudeService();
   const toolService = createToolService();
 
   // Initialize MCP client
